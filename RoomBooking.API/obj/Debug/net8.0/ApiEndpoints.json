@@ -9,7 +9,7 @@
     "Parameters": [],
     "ReturnTypes": [
       {
-        "Type": "System.Collections.Generic.IEnumerable\u00601[[RoomBooking.API.Models.Booking, RoomBooking.API, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "Type": "System.Collections.Generic.IEnumerable\u00601[[RoomBooking.API.DTOs.BookingResponseDto, RoomBooking.API, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
         "MediaTypes": [
           "text/plain",
           "application/json",
@@ -28,8 +28,8 @@
     "Order": 0,
     "Parameters": [
       {
-        "Name": "booking",
-        "Type": "RoomBooking.API.Models.Booking",
+        "Name": "dto",
+        "Type": "RoomBooking.API.DTOs.CreateBookingDto",
         "IsRequired": true
       }
     ],
@@ -61,7 +61,7 @@
     ],
     "ReturnTypes": [
       {
-        "Type": "RoomBooking.API.Models.Booking",
+        "Type": "RoomBooking.API.DTOs.BookingResponseDto",
         "MediaTypes": [
           "text/plain",
           "application/json",
@@ -85,8 +85,8 @@
         "IsRequired": true
       },
       {
-        "Name": "booking",
-        "Type": "RoomBooking.API.Models.Booking",
+        "Name": "dto",
+        "Type": "RoomBooking.API.DTOs.CreateBookingDto",
         "IsRequired": true
       }
     ],
