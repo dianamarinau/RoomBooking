@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using RoomBooking.API.DTOs;
 using RoomBooking.API.Models;
 
 namespace RoomBooking.API.Controllers
@@ -22,36 +23,58 @@ namespace RoomBooking.API.Controllers
 
         // GET: api/Rooms
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Room>>> GetRooms()
+        public async Task<ActionResult<IEnumerable<RoomDto>>> GetRooms()
         {
-            return await _context.Rooms.ToListAsync();
+            return await _context.Rooms.Select(r => new RoomDto
+            {
+                RoomId = r.RoomId,
+                RoomName = r.RoomName,
+                Capacity = r.Capacity,
+                HasProjector = r.HasProjector,
+                IsAvailable = r.IsAvailable
+            }).ToListAsync();
         }
 
         // GET: api/Rooms/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Room>> GetRoom(int id)
+        public async Task<ActionResult<RoomDto>> GetRoom(int id)
         {
-            var room = await _context.Rooms.FindAsync(id);
+            var room = await _context.Rooms.FirstOrDefaultAsync(r => r.RoomId == id);
 
             if (room == null)
             {
                 return NotFound();
             }
 
-            return room;
+            return new RoomDto
+            {
+                RoomId = room.RoomId,
+                RoomName = room.RoomName,
+                Capacity = room.Capacity,
+                HasProjector = room.HasProjector,
+                IsAvailable = room.IsAvailable
+            };
         }
 
         // PUT: api/Rooms/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutRoom(int id, Room room)
+        public async Task<IActionResult> PutRoom(int id, RoomDto dto)
         {
-            if (id != room.RoomId)
-            {
-                return BadRequest();
-            }
+            var validationErrors = dto.Validate();
 
-            _context.Entry(room).State = EntityState.Modified;
+            if (validationErrors.Any())
+                return BadRequest(new { Errors = validationErrors });
+
+            if (id != dto.RoomId)   return BadRequest("ID mismatched");
+
+            var room = await _context.Rooms.FindAsync(id);
+            if (room == null)   return NotFound();
+
+            room.RoomName = dto.RoomName;
+            room.Capacity = dto.Capacity;
+            room.HasProjector = dto.HasProjector;
+            room.IsAvailable = dto.IsAvailable;
 
             try
             {
@@ -59,28 +82,35 @@ namespace RoomBooking.API.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!RoomExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                if (!RoomExists(id))    return NotFound();
+                else   throw;
             }
 
             return NoContent();
         }
 
         // POST: api/Rooms
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Room>> PostRoom(Room room)
+        public async Task<ActionResult<RoomDto>> PostRoom(RoomDto dto)
         {
+            var validationErrors = dto.Validate();
+
+            if(validationErrors.Any())
+                return BadRequest(new { Errors = validationErrors });
+
+            var room = new Room
+            {
+                RoomName = dto.RoomName,
+                Capacity = dto.Capacity,
+                HasProjector = dto.HasProjector,
+                IsAvailable = dto.IsAvailable
+            };
             _context.Rooms.Add(room);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetRoom", new { id = room.RoomId }, room);
+            dto.RoomId = room.RoomId;  // Update DTO with generated ID
+
+            return CreatedAtAction(nameof(GetRoom), new { id = dto.RoomId }, dto);
         }
 
         // DELETE: api/Rooms/5

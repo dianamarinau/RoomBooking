@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using RoomBooking.API.DTOs;
 using RoomBooking.API.Models;
 
 namespace RoomBooking.API.Controllers
@@ -22,52 +23,56 @@ namespace RoomBooking.API.Controllers
 
         // GET: api/Users
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<User>>> GetUsers()
+        public async Task<ActionResult<IEnumerable<UserDto>>> GetUsers()
         {
-            return await _context.Users.ToListAsync();
+            return await _context.Users.Select(u => new UserDto 
+            {
+                UserId = u.UserId,
+                FullName = u.FullName,
+                Email = u.Email,
+                Role = u.Role
+            }).ToListAsync();
         }
 
         // GET: api/Users/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<User>> GetUser(int id)
+        public async Task<ActionResult<UserDto>> GetUser(int id)
         {
-            var user = await _context.Users.FindAsync(id);
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.UserId == id);
 
             if (user == null)
             {
                 return NotFound();
             }
 
-            return user;
+            return new UserDto
+            {
+                UserId = user.UserId,
+                FullName = user.FullName,
+                Email = user.Email,
+                Role = user.Role
+            };
         }
 
         // PUT: api/Users/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutUser(int id, User user)
+        public async Task<IActionResult> PutUser(int id, UserDto dto)
         {
-            if (id != user.UserId)
-            {
+            var validationErrors = dto.Validate();
+            if (validationErrors.Any())
+                return BadRequest(new { Errors = validationErrors });
+
+            if (id != dto.UserId)
                 return BadRequest();
-            }
 
-            _context.Entry(user).State = EntityState.Modified;
+            var user = await _context.Users.FindAsync(id);
+            if (user == null)   return NotFound();
 
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!UserExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
+            user.FullName = dto.FullName;
+            user.Email = dto.Email;
+            user.Role = dto.Role;
+
+            await _context.SaveChangesAsync();
 
             return NoContent();
         }
@@ -75,11 +80,25 @@ namespace RoomBooking.API.Controllers
         // POST: api/Users
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<User>> PostUser(User user)
+        public async Task<ActionResult<User>> PostUser(UserDto dto)
         {
+            var validationErrors = dto.Validate();
+            if (validationErrors.Any())
+            {
+                return BadRequest(new { Errors = validationErrors });
+            }
+
+            var user = new User
+            {
+                FullName = dto.FullName,
+                Email = dto.Email,
+                Role = dto.Role,
+                CreatedAt = DateTime.UtcNow
+            };
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
+            dto.UserId = user.UserId; // Update DTO with generated ID
             return CreatedAtAction("GetUser", new { id = user.UserId }, user);
         }
 
